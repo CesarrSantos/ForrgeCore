@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forja del Núcleo</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --panel: #141925;
+        --panel-strong: #1c2333;
+        --accent: #3fa9f5;
+        --accent-2: #ffc857;
+        --text: #e5e7eb;
+        --muted: #9aa0a6;
+        --success: #8bd17c;
+        --error: #d04e4e;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Trebuchet MS", Arial, sans-serif; }
+      body { display: flex; min-height: 100vh; }
+      .app { display: flex; flex-direction: column; width: 100%; min-height: 100vh; background: radial-gradient(circle at 20% 20%, #16213d 0%, transparent 30%), radial-gradient(circle at 80% 0%, #19263f 0%, transparent 30%), var(--bg); }
+      header.hud-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; padding: 14px 16px 8px; }
+      .resource-card { background: var(--panel); border: 1px solid #1f2637; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+      .resource-card h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
+      .resource-value { font-size: 24px; font-weight: 700; color: var(--text); }
+      .resource-sub { font-size: 13px; color: var(--muted); }
+      main.hud-main { display: grid; grid-template-columns: 220px 1fr; gap: 12px; padding: 0 16px 12px; flex: 1; }
+      main.hud-main.game-mode { grid-template-columns: 1fr; }
+      main.hud-main.game-mode .hud-center { max-width: 980px; justify-self: center; width: 100%; }
+      .panel { background: var(--panel); border: 1px solid #1f2637; border-radius: 12px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+      .panel h4 { margin: 0 0 8px; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; font-size: 13px; }
+      .hud-left button, .hud-bottom button { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2b3347; background: linear-gradient(135deg, #1f2637, #263149); color: var(--text); font-weight: 700; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease; }
+      .hud-left button:hover, .hud-bottom button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+      .hud-center { position: relative; overflow: hidden; }
+      #game { width: 100%; height: 100%; min-height: 520px; }
+      #game-wrapper { position: relative; }
+      #round-timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: rgba(20,25,37,0.9); border: 1px solid #2d3549; font-size: 16px; color: var(--accent-2); box-shadow: 0 8px 20px rgba(0,0,0,0.35); letter-spacing: 0.5px; }
+      #phase-label { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+      #shop-wrapper { display: none; }
+      .tip { font-size: 13px; color: var(--muted); line-height: 1.4; }
+      .upgrade-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .upgrade { padding: 8px; border-radius: 10px; background: var(--panel-strong); border: 1px solid #232c3f; }
+      .upgrade strong { color: var(--accent-2); }
+      .lock-note { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+      .hud-bottom { padding: 0 16px 14px; display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: center; }
+      .status-line { font-size: 14px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+      .pill { padding: 4px 10px; border-radius: 999px; background: #1e2637; color: var(--text); font-size: 12px; border: 1px solid #283149; }
+      .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; }
+      .overlay { position: fixed; inset: 0; background: rgba(7, 10, 16, 0.8); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 50; }
+      .overlay-content { width: min(960px, 90vw); max-height: 80vh; overflow: auto; background: var(--panel); border: 1px solid #24304a; border-radius: 14px; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
+      .overlay header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+      .overlay-close { border: 1px solid #2f3b57; background: #1c2333; color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+      .skill-tree { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .skill-branch { background: #171d2a; border: 1px solid #283149; border-radius: 12px; padding: 10px; }
+      .skill-branch h4 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.6px; }
+      .skill-card { border: 1px solid #2a344a; background: #141a27; border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+      .skill-card.locked { opacity: 0.6; }
+      .skill-card h5 { margin: 0 0 4px; font-size: 13px; color: var(--accent-2); }
+      .skill-card p { margin: 0 0 6px; font-size: 12px; color: #b6bac3; }
+      .skill-cost { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+      .skill-card button { width: 100%; padding: 6px; border-radius: 8px; border: 1px solid #30384d; background: linear-gradient(135deg,#294060,#3b5275); color: #e5e7eb; cursor: pointer; }
+      .skill-card button:disabled { background: #1c2230; color: #66708a; cursor: not-allowed; }
+      @media (max-width: 980px) { .skill-tree { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 720px) { .skill-tree { grid-template-columns: 1fr; } }
+      @media (max-width: 1100px) { main.hud-main { grid-template-columns: 1fr; } .hud-left { order: 2; } .hud-center { order: 1; } .hud-bottom { grid-template-columns: 1fr; } }
+      @media (max-width: 900px) { .upgrade-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 720px) { .upgrade-list { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="hud-top">
+        <div class="resource-card">
+          <h3>Chispas</h3>
+          <div class="resource-value" id="stat-sparks">0</div>
+          <div class="resource-sub">Base del minijuego</div>
+        </div>
+        <div class="resource-card">
+          <h3>Monedas</h3>
+          <div class="resource-value" id="stat-coins">0</div>
+          <div class="resource-sub">Gasto rápido · <span id="stat-coins-rate">+0.00/s</span></div>
+        </div>
+        <div class="resource-card">
+          <h3>Energía</h3>
+          <div class="resource-value" id="stat-energy">0</div>
+          <div class="resource-sub">Desbloqueos · <span id="stat-energy-rate">+0.00/s</span></div>
+        </div>
+        <div class="resource-card">
+          <h3>Combo</h3>
+          <div class="resource-value" id="stat-combo">x1</div>
+          <div class="resource-sub" id="stat-last-hit">Esperando golpe…</div>
+        </div>
+      </header>
+
+      <main class="hud-main">
+        <aside class="panel hud-left">
+          <h4>Árbol</h4>
+          <button id="btn-skill-tree">Abrir Árbol de Habilidades</button>
+          <p class="tip" style="margin-top:10px;">Se abre en overlay independiente.</p>
+        </aside>
+
+        <section class="panel hud-center">
+          <div id="phase-label">Fase: Minijuego (10s)</div>
+          <div id="game-wrapper">
+            <div id="round-timer">10.0s</div>
+            <div id="game"></div>
+          </div>
+          <div id="shop-wrapper">
+            <h3 style="margin:0 0 8px;">Taller de mejoras</h3>
+            <div class="lock-note" id="upgrades-lock-msg">Completa una ronda para ver las mejoras.</div>
+            <div class="upgrade-list" id="upgrade-list">
+              <div class="upgrade">No hay upgrades aún. Próximo paso: datos + costos.</div>
+            </div>
+            <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+              <button id="btn-play-again" style="width:auto; padding:10px 16px; border-radius:10px; border:1px solid #2b3347; background: linear-gradient(135deg, #1f2637, #263149); color:#e5e7eb; font-weight:700; cursor:pointer;">Volver a jugar</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="hud-bottom">
+        <div class="status-line">
+          <span class="pill">Loop: 30–90s</span>
+          <span class="pill">Tick idle: 1s</span>
+          <span class="pill" id="status-save">Guardado local pendiente</span>
+          <span class="pill" id="status-build">v0.0.1 prototipo</span>
+        </div>
+        <div class="panel hud-bottom-actions">
+          <button id="btn-ascend" style="background: linear-gradient(135deg, #2b1c2f, #3a2540); border-color: #4a2f52;">Ascender (bloqueado)</button>
+        </div>
+      </footer>
+    </div>
+
+    <div class="loading" id="loading">Cargando Forja del Núcleo…</div>
+
+    <div class="overlay" id="overlay-skill">
+      <div class="overlay-content">
+        <header>
+          <h3>Árbol de Habilidades</h3>
+          <button class="overlay-close" data-close="#overlay-skill">Cerrar</button>
+        </header>
+        <div class="skill-tree" id="skill-tree"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay-ascend">
+      <div class="overlay-content">
+        <header>
+          <h3>Ascender</h3>
+          <button class="overlay-close" data-close="#overlay-ascend">Cerrar</button>
+        </header>
+        <div class="tip" style="margin-bottom:10px;">
+          Requisito: lograr <strong>2000 chispas</strong> en un solo golpe.
+          <span id="ascension-req"></span>
+        </div>
+        <div class="panel" style="margin-bottom:12px; padding:10px;">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <div>Esencia disponible: <strong id="ascension-points">0</strong></div>
+            <div>Mejor golpe: <strong id="ascension-best">0</strong></div>
+            <div>Ganancia al ascender: <strong id="ascension-gain">0</strong></div>
+            <button id="btn-ascend-confirm" style="margin-left:auto;">Ascender ahora</button>
+          </div>
+        </div>
+        <div class="skill-tree" id="ascension-tree"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
