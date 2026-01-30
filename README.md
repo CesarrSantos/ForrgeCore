@@ -5,6 +5,10 @@ Idle / incremental con minijuego de timing. Implementado con HTML + JavaScript +
 ## Inicio rápido
 
 - Abre `index.html` en un servidor local (recomendado) o directo en el navegador.
+- Linux/macOS: ejecuta `./run.sh`.
+- Windows: ejecuta `run.bat`.
+
+Si quieres cambiar el puerto, define `PORT` antes de ejecutar el script (por ejemplo, `PORT=8080 ./run.sh` en Linux/macOS o `set PORT=8080` antes de `run.bat` en Windows).
 
 ## Estructura
 
